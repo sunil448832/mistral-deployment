@@ -8,10 +8,10 @@ print("Model Loaded!!")
 
 @app.route('/text_generation', methods=['POST'])
 def text_generation():
-    message=request.json.get('message')
+    message=request.json.get('question')
     chat_history=request.json.get('chat_history')
-    question=MistralPrompts.create_question_prompt(message, chat_history)
-    response=model.generate_response(message)
+    question_prompt=MistralPrompts.create_question_prompt(message, chat_history)
+    response=model.generate_response(question_prompt)
     response=MistralPrompts.extract_response(response)
     return jsonify({'response': response})
 

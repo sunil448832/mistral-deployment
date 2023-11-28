@@ -1,10 +1,18 @@
 import gradio as gr
+import requests
 
 def inference(message, history):
-    partial_message = ""
-    for token in client.text_generation(message, max_new_tokens=20, stream=True):
-        partial_message += token
-        yield partial_message
+    api_endpoint = 'http://localhost:5000/text_generation'
+    data={"question":message,
+          "chat_history":history
+          }
+    response = requests.post(api_endpoint,json=data)
+    if response.status_code == 200:
+        res = response.json()            
+        return res['response']
+    else:
+        return 'Error: Unable to get Answer.'
+
 
 gr.ChatInterface(
     inference,

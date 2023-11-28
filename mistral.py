@@ -1,19 +1,23 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from transformers import BitsAndBytesConfig
 
 # Define a Language Model class
 class MistralModel:
     def __init__(self, model_name):
-        # Determine the device to use (GPU if available, otherwise CPU)
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         
         # Load the pre-trained language model with specific settings
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.bfloat16,  # Set the data type to float16
-            load_in_8bit=True,         # Load in 8-bit format if available
-            device_map='auto'          # Automatically select the device
-        ).bfloat16()  # Convert the model to bfloat16 for lower precision
+
+        model_name="mistralai/Mistral-7B-Instruct-v0.1"
+        nf4_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16
+        )
+
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto', quantization_config=nf4_config)
+
         
         # Initialize the tokenizer for the same model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -71,7 +75,7 @@ class MistralPrompts:
 
     # Create a question prompt by adding context and question to a chat history prompt.
     @staticmethod
-    def create_question_prompt(question, context, chat_history):
+    def create_question_prompt(question, chat_history):
         instruction = '''
               You are smart bot which are good in conversation. Answer following question truthfully. if you don't know the answer just say,
               I don't know. don't try to make up answer. You can refer previous conversation in Chat Histrory.

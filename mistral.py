@@ -87,3 +87,4 @@ class MistralPrompts:
     def extract_response(response):
         response = response.split('[/INST]')[-1].split('</s>')[0].strip()
         return response
+

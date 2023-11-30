@@ -1,9 +1,5 @@
 flask
 torch
-transformers
+transformer
 accelerate
 bitsandbytes
-scipy
-gradio
-
-

@@ -2,7 +2,7 @@ import gradio as gr
 import requests
 
 def inference(message, history):
-    api_endpoint = 'http://localhost:5000/text_generation'
+    api_endpoint = 'http://127.0.0.1:8080/text_generation'
     data={"question":message,
           "chat_history":history
           }
@@ -24,5 +24,6 @@ gr.ChatInterface(
     retry_btn="Retry",
     undo_btn="Undo",
     clear_btn="Clear",
-).launch()
+).launch(share=True)
+
 

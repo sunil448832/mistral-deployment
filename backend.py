@@ -11,10 +11,13 @@ def text_generation():
     message=request.json.get('question')
     chat_history=request.json.get('chat_history')
     question_prompt=MistralPrompts.create_question_prompt(message, chat_history)
+    print("Question Prompt: ",question_prompt)
     response=model.generate_response(question_prompt)
+    print("Response all : ",response)
     response=MistralPrompts.extract_response(response)
     return jsonify({'response': response})
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080)
+
 

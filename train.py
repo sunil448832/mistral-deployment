@@ -11,6 +11,7 @@ import torch
 from transformers import BitsAndBytesConfig
 from utils import print_number_of_trainable_model_parameters
 from transformers import  get_cosine_schedule_with_warmup
+from accelerate import Accelerator
 
 
 
@@ -54,8 +55,8 @@ print("Done!")
 peft_model = get_peft_model(original_model, lora_config)
 print(print_number_of_trainable_model_parameters(peft_model))
 
-peft_model, optimizer, train_loader, eval_loader = accelerator.prepare(
-    peft_model, optimizer=None, train_loader=dataset['train'], eval_loader=dataset['test']
+peft_model, train_loader, eval_loader = accelerator.prepare(
+    peft_model, dataset['train'], dataset['test']
 )
 
 import time
@@ -81,9 +82,9 @@ def evaluate(eval_steps):
 peft_training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir = 'True',
-    per_device_train_batch_size=2,
-    per_device_eval_batch_size=4,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=4,
+    per_device_eval_batch_size=6,
+    gradient_accumulation_steps=2,
     num_train_epochs=1,
     eval_steps=200,
     learning_rate=1e-4,
@@ -110,4 +111,5 @@ trainer = Trainer(
 trainer.train()
 if accelerator.is_main_process:
     trainer.save_model(output_dir='weights')
+
 

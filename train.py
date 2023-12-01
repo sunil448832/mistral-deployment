@@ -10,10 +10,13 @@ from transformers import AutoModelForCausalLM, AutoTokenizer,TrainingArguments,T
 import torch
 from transformers import BitsAndBytesConfig
 from utils import print_number_of_trainable_model_parameters
+from transformers import  get_cosine_schedule_with_warmup
 
 
 
 from transformers import AutoTokenizer
+accelerator = Accelerator()
+
 data_url='https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split_no_imsorry.json'
 model_name="mistralai/Mistral-7B-Instruct-v0.1"
 max_length=512
@@ -46,9 +49,14 @@ nf4_config = BitsAndBytesConfig(
             )
 print("Downloading Model...")
 original_model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto', quantization_config=nf4_config)
+
 print("Done!")
 peft_model = get_peft_model(original_model, lora_config)
 print(print_number_of_trainable_model_parameters(peft_model))
+
+peft_model, optimizer, train_loader, eval_loader = accelerator.prepare(
+    peft_model, optimizer=None, train_loader=dataset['train'], eval_loader=dataset['test']
+)
 
 import time
 output_dir = 'outputs'
@@ -74,11 +82,12 @@ peft_training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir = 'True',
     per_device_train_batch_size=2,
-    per_device_eval_batch_size=2,
+    per_device_eval_batch_size=4,
     gradient_accumulation_steps=4,
     num_train_epochs=1,
     eval_steps=200,
     learning_rate=1e-4,
+    lr_scheduler_type='cosine',
     save_total_limit=1,  # Save only the best checkpoint
     load_best_model_at_end=True,  # Load the best checkpoint at the end of training
     evaluation_strategy="steps",  # Evaluate at specific steps
@@ -92,11 +101,13 @@ trainer = Trainer(
     # Replace these with your model, tokenizer, and data
     model=peft_model,
     args=peft_training_args,
-    train_dataset=dataset['train'],
-    eval_dataset=dataset['test'],
+    train_dataset=train_loader,
+    eval_dataset=eval_loader,
     tokenizer=tokenizer,
     data_collator=collate_fn,
 )
 
 trainer.train()
-trainer.save_model(output_dir='weights')
+if accelerator.is_main_process:
+    trainer.save_model(output_dir='weights')
+

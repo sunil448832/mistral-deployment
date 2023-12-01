@@ -141,5 +141,6 @@ if __name__=='__main__':
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     print("Preparing dataset...")
     dataset=VicunaDataset(data_url,tokenizer,max_length)()
+    print(dataset)
     print("Done!")
     

@@ -33,7 +33,7 @@ def create_prompt(dialog):
 
 
 def preprocess(prompt, tokenizer, max_length=1024):
-    q_list, a_list = [], []
+    input_ids, attention_masks,labels = [], [],[]
     question = ''
     ans_end_template_token_ids = tokenizer(ANS_END_TEMPLATE)
 
@@ -50,27 +50,29 @@ def preprocess(prompt, tokenizer, max_length=1024):
                                         tokenised_answer['input_ids'] + \
                                         ans_end_template_token_ids['input_ids']
 
-        tokenised_answer['attention_mask'] = [1] * len(tokenised_answer['input_ids'])
-        q_list.append(tokenised_question)
-        a_list.append(tokenised_answer)
+        input_ids.append(tokenised_question['input_ids'])
+        attention_masks.append(tokenised_question['attention_mask'])
+        labels.append(tokenised_answer['input_ids'])
 
-    return q_list, a_list
+    return input_ids, attention_masks,labels
 
 
 
 
 def build_dataset(dataset,tokenizer,max_seq_len):
   dataset=dataset.map(lambda example:{"prompt": create_prompt(example["conversations"])})
-  inputs,labels=[],[]
+  input_ids,attention_masks,labels=[],[],[]
   for example in tqdm(dataset):
     prompt=example['prompt']
-    q_prompt_tokenised,a_prompt_tokenized=preprocess(prompt,tokenizer,max_seq_len)
-    inputs.extend(q_prompt_tokenised)
-    labels.extend(a_prompt_tokenized)
+    input_id,attention_mask,label=preprocess(prompt,tokenizer,max_seq_len)
+    input_ids.extend(input_id)
+    attention_masks.extend(attention_mask)
+    labels.extend(label)
 
 
-  data_dict={"inputs":inputs,
-        "labels":labels}
+  data_dict={"input_ids":input_ids,
+             "attention_mask":attention_masks,
+             "labels":labels}
   dataset = Dataset.from_dict(data_dict)
 
   dataset = dataset.train_test_split(test_size=0.2, shuffle=False, seed=42)
@@ -88,6 +90,7 @@ def collate_fn(batch,tokeniser):
       data['labels'].append(sample['labels']+[IGNORE_INDEX]*(max_len-len(sample['labels'])))
 
     batch={k:torch.tensor(v) for k,v in data.items()}
+    #print(batch)
     return batch
 
 def download(url,file_name):
@@ -110,7 +113,7 @@ def download(url,file_name):
         print("An error occurred:", str(e))
 
 class VicunaDataset:
-    def __init__(self,download_url,tokenizer,max_length=1024) -> None:
+    def __init__(self,download_url,tokenizer,max_length=1024,num_samples=10000) -> None:
         os.makedirs('data', exist_ok=True)
         self.data_path=os.path.join('data','sharegpt.json')
         if not os.path.exists( self.data_path):
@@ -122,10 +125,11 @@ class VicunaDataset:
             print(f"Data already exists at { self.data_path}. Skipping download.")
         self.tokenizer=tokenizer
         self.max_length=max_length
+        self.num_samples=num_samples
     
     def __call__(self):
         dataset=load_dataset("json", data_files= self.data_path)
-        dataset=dataset['train'].select(range(10000))
+        dataset=dataset['train'].select(range(self.num_samples))
         dataset=build_dataset(dataset,self.tokenizer,self.max_length)
         return dataset
 

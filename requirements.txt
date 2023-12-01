@@ -1,5 +1,8 @@
 flask
 torch
-transformer
+transformers
+datasets
 accelerate
 bitsandbytes
+peft
+scipy
